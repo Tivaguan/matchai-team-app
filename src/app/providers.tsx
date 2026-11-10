@@ -1,18 +1,25 @@
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useState } from "react";
+
+let browserQueryClient: QueryClient | undefined;
+
+function makeQueryClient() {
+  return new QueryClient({
+    defaultOptions: {
+      // The counter iPad stays open all day, so refresh when it comes back into view.
+      queries: { staleTime: 30_000, refetchOnWindowFocus: true, retry: 1 },
+    },
+  });
+}
+
+function getQueryClient() {
+  // Keep server renders isolated, and keep one cache for the whole browser tab.
+  if (typeof window === "undefined") return makeQueryClient();
+  browserQueryClient ??= makeQueryClient();
+  return browserQueryClient;
+}
 
 export function Providers({ children }: { children: React.ReactNode }) {
-  const [queryClient] = useState(
-    () =>
-      new QueryClient({
-        defaultOptions: {
-          // The counter iPad stays open all day, so refresh when it comes back into view.
-          queries: { staleTime: 30_000, refetchOnWindowFocus: true },
-        },
-      }),
-  );
-
-  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+  return <QueryClientProvider client={getQueryClient()}>{children}</QueryClientProvider>;
 }

@@ -467,7 +467,29 @@ export type Database = {
       }
     }
     Functions: {
+      create_employee: {
+        Args: { p_name: string; p_pin: string }
+        Returns: string
+      }
+      employee_pin_status: {
+        Args: never
+        Returns: {
+          employee_id: string
+          has_pin: boolean
+          locked_until: string
+        }[]
+      }
+      get_day_status: { Args: never; Returns: Json }
+      set_employee_pin: {
+        Args: { p_employee_id: string; p_new_pin: string }
+        Returns: undefined
+      }
       shop_today: { Args: never; Returns: string }
+      unlock_employee: { Args: { p_employee_id: string }; Returns: undefined }
+      verify_employee_pin: {
+        Args: { p_employee_id: string; p_pin: string }
+        Returns: Json
+      }
     }
     Enums: {
       cash_count_kind: "opening" | "closing"
