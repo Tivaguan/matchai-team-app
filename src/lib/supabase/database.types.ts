@@ -491,6 +491,13 @@ export type Database = {
           locked_until: string
         }[]
       }
+      get_availability_roster: {
+        Args: never
+        Returns: {
+          employee_id: string
+          employee_name: string
+        }[]
+      }
       get_counter_stock: {
         Args: never
         Returns: {
@@ -504,6 +511,11 @@ export type Database = {
         }[]
       }
       get_day_status: { Args: never; Returns: Json }
+      get_my_availability: {
+        Args: { p_employee_id: string; p_pin: string; p_week_start: string }
+        Returns: Json
+      }
+      get_published_schedule: { Args: { p_week_start: string }; Returns: Json }
       log_cash_count: {
         Args: {
           p_breakdown: Json
@@ -519,6 +531,15 @@ export type Database = {
           p_employee_id: string
           p_pin: string
           p_reason: string
+        }
+        Returns: Json
+      }
+      save_availability: {
+        Args: {
+          p_days: Json
+          p_employee_id: string
+          p_pin: string
+          p_week_start: string
         }
         Returns: Json
       }

@@ -22,11 +22,15 @@ type PinPadProps = {
   onComplete: (pin: string) => void;
   disabled?: boolean;
   error?: string | null;
+  /** Shuffle the digits (default). Turn off on a personal phone, where nobody is watching. */
+  shuffle?: boolean;
 };
 
+const ORDERED_DIGITS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 0];
+
 /** Shuffled 4-digit keypad. Made to sit on the dark counter background. */
-export function PinPad({ onComplete, disabled = false, error = null }: PinPadProps) {
-  const [digits] = useState(shuffledDigits);
+export function PinPad({ onComplete, disabled = false, error = null, shuffle = true }: PinPadProps) {
+  const [digits] = useState(() => (shuffle ? shuffledDigits() : ORDERED_DIGITS));
   const [pin, setPin] = useState("");
 
   function press(digit: number) {

@@ -14,10 +14,10 @@ type PickerProps = {
 };
 
 /** A dropdown list in the app's own style (never the browser's native one). */
-export function Picker({ id, value, onChange, options, className = "" }: PickerProps) {
+export function Picker({ id, value, onChange, options, className = "min-w-36" }: PickerProps) {
   return (
     <Select items={options} value={value} onValueChange={(next) => onChange(next as string)}>
-      <SelectTrigger id={id} className={`h-11 min-w-36 rounded-md bg-white px-3 text-base data-[size=default]:h-11 ${className}`}>
+      <SelectTrigger id={id} className={`h-11 rounded-md bg-white px-3 text-base data-[size=default]:h-11 ${className}`}>
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
