@@ -80,6 +80,7 @@ export type Database = {
       cash_counts: {
         Row: {
           amount: number
+          breakdown: Json | null
           created_at: string
           day: string
           employee_id: string
@@ -88,6 +89,7 @@ export type Database = {
         }
         Insert: {
           amount: number
+          breakdown?: Json | null
           created_at?: string
           day?: string
           employee_id: string
@@ -96,6 +98,7 @@ export type Database = {
         }
         Update: {
           amount?: number
+          breakdown?: Json | null
           created_at?: string
           day?: string
           employee_id?: string
@@ -467,6 +470,15 @@ export type Database = {
       }
     }
     Functions: {
+      adjust_stock: {
+        Args: {
+          p_amount: number
+          p_employee_id: string
+          p_item_id: string
+          p_pin: string
+        }
+        Returns: Json
+      }
       create_employee: {
         Args: { p_name: string; p_pin: string }
         Returns: string
@@ -479,7 +491,37 @@ export type Database = {
           locked_until: string
         }[]
       }
+      get_counter_stock: {
+        Args: never
+        Returns: {
+          category_id: string
+          category_name: string
+          category_sort: number
+          current_quantity: number
+          item_id: string
+          item_name: string
+          unit: string
+        }[]
+      }
       get_day_status: { Args: never; Returns: Json }
+      log_cash_count: {
+        Args: {
+          p_breakdown: Json
+          p_employee_id: string
+          p_kind: Database["public"]["Enums"]["cash_count_kind"]
+          p_pin: string
+        }
+        Returns: Json
+      }
+      log_expense: {
+        Args: {
+          p_amount: number
+          p_employee_id: string
+          p_pin: string
+          p_reason: string
+        }
+        Returns: Json
+      }
       set_employee_pin: {
         Args: { p_employee_id: string; p_new_pin: string }
         Returns: undefined

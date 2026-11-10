@@ -1,10 +1,14 @@
 "use client";
 
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import { NoteIcon, ShopIcon, TinIcon } from "@/components/brand-icons";
+import { MilkIcon, NoteIcon, ShopIcon } from "@/components/brand-icons";
+import { CashCountScreen } from "@/components/counter/cash-count-screen";
+import { ExpenseScreen } from "@/components/counter/expense-screen";
 import { PinPad } from "@/components/counter/pin-pad";
+import { type Employee, labelClass, noteClass } from "@/components/counter/shared";
+import { StockScreen } from "@/components/counter/stock-screen";
 import { RoleGate } from "@/components/role-gate";
 import { supabase } from "@/lib/supabase/client";
 
@@ -20,19 +24,19 @@ type PinResult =
 
 const ACTIONS = {
   open: { label: "Open the day", Icon: ShopIcon },
-  stock: { label: "Stock", Icon: TinIcon },
+  stock: { label: "Stock", Icon: MilkIcon },
   expense: { label: "Expense", Icon: NoteIcon },
   close: { label: "Close the day", Icon: ShopIcon },
 } as const;
 
 type ActionId = keyof typeof ACTIONS;
-type Employee = { id: string; name: string };
 
 // With nobody touching the screen, an open flow goes back to the home screen.
 const IDLE_MS = 60_000;
 
-const labelClass = "font-label font-semibold tracking-[0.06em] uppercase";
-const noteClass = "font-label font-medium tracking-[0.14em] uppercase";
+// How long the "saved" message stays on the home screen.
+const FLASH_MS = 4_000;
+
 const tileClass =
   "flex min-h-44 touch-manipulation flex-col items-center justify-center gap-6 p-6 text-center transition-colors select-none";
 
@@ -55,7 +59,10 @@ function pinMessage(result: PinResult): string | null {
 function Counter() {
   const [actionId, setActionId] = useState<ActionId | null>(null);
   const [employee, setEmployee] = useState<Employee | null>(null);
-  const [verified, setVerified] = useState(false);
+  // The PIN is kept only while one flow is open, so the server can check it again when saving.
+  const [pin, setPin] = useState<string | null>(null);
+  const [flash, setFlash] = useState<string | null>(null);
+  const queryClient = useQueryClient();
   const [pinError, setPinError] = useState<string | null>(null);
   const [padKey, setPadKey] = useState(0);
 
@@ -92,14 +99,17 @@ function Counter() {
   });
 
   const verifyPin = useMutation({
-    mutationFn: async ({ employeeId, pin }: { employeeId: string; pin: string }) => {
-      const { data, error } = await supabase.rpc("verify_employee_pin", { p_employee_id: employeeId, p_pin: pin });
+    mutationFn: async (input: { employeeId: string; pin: string }) => {
+      const { data, error } = await supabase.rpc("verify_employee_pin", {
+        p_employee_id: input.employeeId,
+        p_pin: input.pin,
+      });
       if (error) throw error;
       return data as PinResult;
     },
-    onSuccess: (result) => {
+    onSuccess: (result, input) => {
       if (result.ok) {
-        setVerified(true);
+        setPin(input.pin);
         return;
       }
       setPinError(pinMessage(result));
@@ -114,12 +124,28 @@ function Counter() {
   const backToHome = useCallback(() => {
     setActionId(null);
     setEmployee(null);
-    setVerified(false);
+    setPin(null);
     setPinError(null);
   }, []);
 
+  // After a save: back to the home screen, with a short confirmation.
+  const finish = useCallback(
+    (message: string) => {
+      queryClient.invalidateQueries({ queryKey: ["day-status"] });
+      setFlash(message);
+      backToHome();
+    },
+    [queryClient, backToHome],
+  );
+
+  useEffect(() => {
+    if (!flash) return;
+    const timer = setTimeout(() => setFlash(null), FLASH_MS);
+    return () => clearTimeout(timer);
+  }, [flash]);
+
   function backOneStep() {
-    if (employee && !verified) {
+    if (employee && !pin) {
       setEmployee(null);
       setPinError(null);
     } else {
@@ -136,14 +162,17 @@ function Counter() {
       timer = setTimeout(backToHome, IDLE_MS);
     };
     window.addEventListener("pointerdown", restart);
+    window.addEventListener("keydown", restart);
     return () => {
       clearTimeout(timer);
       window.removeEventListener("pointerdown", restart);
+      window.removeEventListener("keydown", restart);
     };
   }, [actionId, backToHome]);
 
   const action = actionId ? ACTIONS[actionId] : null;
   const day = dayQuery.data?.state;
+  const actor = employee && pin ? { employee, pin } : null;
 
   return (
     <div className="flex min-h-dvh flex-1 flex-col bg-ink text-paper md:h-dvh">
@@ -154,6 +183,12 @@ function Counter() {
           <span className={`${noteClass} min-h-6 text-base text-paper/60`}>{today}</span>
         </span>
       </header>
+
+      {flash && !action && (
+        <p className={`${labelClass} mx-6 mb-1.5 bg-sage px-5 py-3 text-2xl text-ink sm:mx-8`} role="status">
+          {flash}
+        </p>
+      )}
 
       {!action && !day && (
         <main className="flex flex-1 items-center justify-center px-6 pb-6 text-center">
@@ -220,7 +255,7 @@ function Counter() {
       )}
 
       {action && (
-        <main className="flex flex-1 flex-col gap-6 px-6 pb-6 sm:px-8 sm:pb-8">
+        <main className="flex min-h-0 flex-1 flex-col gap-6 px-6 pb-6 sm:px-8 sm:pb-8">
           <div className="flex items-center gap-5 border-t border-paper/25 pt-4">
             <button
               type="button"
@@ -234,10 +269,11 @@ function Counter() {
               <action.Icon className="size-7" />
               {action.label}
             </span>
+            {actor && <span className={`${noteClass} ml-auto text-xl text-paper/60`}>{actor.employee.name}</span>}
           </div>
 
           {!employee && (
-            <section className="flex flex-col gap-6">
+            <section className="flex flex-1 flex-col items-center justify-center gap-8 pb-16 text-center">
               <h1 className="font-serif text-6xl leading-none uppercase">Who are you?</h1>
               {employeesQuery.isPending && <p className={`${noteClass} text-xl text-paper/60`}>Loading</p>}
               {employeesQuery.isError && (
@@ -246,13 +282,13 @@ function Counter() {
               {employeesQuery.data?.length === 0 && (
                 <p className={`${noteClass} text-xl text-paper/60`}>No employees yet · an owner adds them</p>
               )}
-              <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+              <div className="flex w-full max-w-5xl flex-wrap justify-center gap-1.5">
                 {employeesQuery.data?.map((item) => (
                   <button
                     key={item.id}
                     type="button"
                     onClick={() => setEmployee(item)}
-                    className={`${labelClass} h-28 touch-manipulation bg-paper px-3 text-3xl text-ink transition-colors select-none active:bg-sage`}
+                    className={`${labelClass} h-28 w-[calc(50%-0.25rem)] touch-manipulation bg-paper px-3 text-3xl text-ink transition-colors select-none active:bg-sage sm:w-60`}
                   >
                     {item.name}
                   </button>
@@ -261,7 +297,7 @@ function Counter() {
             </section>
           )}
 
-          {employee && !verified && (
+          {employee && !actor && (
             <section className="flex flex-1 flex-col items-center gap-4">
               <h1 className="text-center font-serif text-6xl leading-none uppercase">Hi {employee.name}</h1>
               <PinPad
@@ -273,19 +309,11 @@ function Counter() {
             </section>
           )}
 
-          {employee && verified && (
-            <section className="flex flex-1 flex-col items-center justify-center gap-6 text-center">
-              <h1 className="font-serif text-6xl leading-none uppercase">PIN accepted</h1>
-              <p className={`${noteClass} text-xl text-paper/60`}>The {action.label.toLowerCase()} screen is coming next</p>
-              <button
-                type="button"
-                onClick={backToHome}
-                className={`${labelClass} h-16 touch-manipulation bg-paper px-10 text-2xl text-ink select-none active:bg-sage`}
-              >
-                Back to home
-              </button>
-            </section>
+          {actor && (actionId === "open" || actionId === "close") && (
+            <CashCountScreen kind={actionId === "open" ? "opening" : "closing"} actor={actor} onSaved={finish} />
           )}
+          {actor && actionId === "expense" && <ExpenseScreen actor={actor} onSaved={finish} />}
+          {actor && actionId === "stock" && <StockScreen actor={actor} />}
         </main>
       )}
     </div>

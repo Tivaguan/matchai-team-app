@@ -11,12 +11,13 @@ function Silhouette({ className, children }: IconProps & { children: React.React
   );
 }
 
-/** A matcha tin: lid, body, and a label band. */
-export function TinIcon({ className }: IconProps) {
+/** A milk carton with a folded top and a blank label, for stock. */
+export function MilkIcon({ className }: IconProps) {
   return (
     <Silhouette className={className}>
-      <rect x="15" y="6" width="34" height="11" rx="3" />
-      <path d="M18 20h28v34a5 5 0 0 1-5 5H23a5 5 0 0 1-5-5V20Zm5 12v12h18V32H23Z" />
+      <path d="M22 3h20v7H22Z" />
+      <path d="M22 12h20l6 11H16l6-11Z" />
+      <path d="M16 26h32v34H16V26Zm6 9v12h20V35H22Z" />
     </Silhouette>
   );
 }

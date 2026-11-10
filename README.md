@@ -23,3 +23,15 @@ Every database change is a migration file in `supabase/migrations/`. Never chang
 
 - New migration: `supabase migration new <name>`
 - Apply to the linked project: `supabase db push`
+
+## Photo credits
+
+The note and coin pictures on the drawer count screen are in `public/money/`.
+
+- Notes 200, 100, 50, 20: pictures of the 2023 series supplied by the project owner.
+  The designs belong to Bank Al-Maghrib.
+- Coins 5, 2, 1 and 50 c: "5dirhams - 2011", "2dirhams - 2002", "1dirham - 2002",
+  "50centimes - 2011" by Hamza Izourane, Wikimedia Commons, CC BY-SA 4.0.
+- Coin 10: "10 MAD, reverse" by Raf24, Wikimedia Commons, CC BY-SA 4.0.
+
+The cropped coin pictures are shared under the same CC BY-SA 4.0 license.
