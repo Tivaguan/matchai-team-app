@@ -47,9 +47,9 @@ export default function CashPage() {
 
   return (
     <>
-      <div className="flex flex-wrap items-end justify-between gap-4 border-b border-ink pt-6 pb-3">
+      <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3 border-b border-ink pt-6 pb-3">
         {/* The period is the big heading; the page name is only read out by screen readers. */}
-        <div className="flex min-w-0 flex-col">
+        <div className="flex min-w-0 flex-col max-sm:w-full">
           <h1 className="sr-only">Cash</h1>
           {view === "day" ? (
             <TitleStepper
@@ -89,7 +89,7 @@ export default function CashPage() {
             />
           )}
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center justify-between gap-3 max-sm:w-full">
           <Switch
             label="Show a day or a month"
             value={view}

@@ -3,7 +3,8 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   // While developing, let a phone on the same Wi-Fi open the app at the Mac's
   // address (http://192.168.x.x:3000). Has no effect on the deployed app.
-  allowedDevOrigins: ["192.168.*.*"],
+  // "*.lhr.life" is the temporary https tunnel used to test on a real phone.
+  allowedDevOrigins: ["192.168.*.*", "*.lhr.life"],
   cacheComponents: true,
   partialPrefetching: true,
   experimental: {

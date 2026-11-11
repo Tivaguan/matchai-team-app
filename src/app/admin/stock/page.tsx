@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { StockLog } from "@/components/admin/stock-log";
-import { IconMenu, Picker, Switch } from "@/components/picker";
+import { IconMenu, Picker } from "@/components/picker";
 import { formatQuantity } from "@/lib/format";
 import { supabase } from "@/lib/supabase/client";
 
@@ -72,7 +72,6 @@ export default function StockPage() {
   const [categoryForm, setCategoryForm] = useState<{ id: string | null; name: string } | null>(null);
   const [itemForm, setItemForm] = useState<ItemForm | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
-  const [onlyLow, setOnlyLow] = useState(false);
   // Delete asks for a second tap before it happens.
   const [confirmDelete, setConfirmDelete] = useState(false);
   // The log is a view of its own, opened from the Log button or from one item.
@@ -175,9 +174,6 @@ export default function StockPage() {
     );
   }
 
-  const activeItems = data?.items.filter((item) => item.active) ?? [];
-  const lowItems = activeItems.filter((item) => item.isLow);
-  const showLowOnly = onlyLow;
   const editedCategory = data?.categories.find((category) => category.id === categoryForm?.id) ?? null;
   const editedItem = data?.items.find((item) => item.id === itemForm?.id) ?? null;
   const linkClass = "self-start text-base text-ink/70 underline underline-offset-4 hover:text-ink";
@@ -213,15 +209,6 @@ export default function StockPage() {
               },
             ]}
           />
-          <Switch
-            label="Show every item or only the low ones"
-            value={showLowOnly ? "low" : "all"}
-            onChange={(next) => setOnlyLow(next === "low")}
-            options={[
-              { value: "all", label: `All ${activeItems.length}` },
-              { value: "low", label: `Low ${lowItems.length}` },
-            ]}
-          />
         </div>
         <button
           type="button"
@@ -243,15 +230,12 @@ export default function StockPage() {
 
       {data && data.categories.length > 0 && (
         <>
-          {showLowOnly && lowItems.length === 0 && <p className="text-ink/60">Nothing is low right now.</p>}
-
           {/* One card per category, laid out like the cards of the shop's menu. */}
           <div className={"gap-5 md:columns-2 " + (data.categories.length > 4 ? "lg:columns-3" : "")}>
             {data.categories.map((category) => {
               const items = data.items.filter(
-                (item) => item.category_id === category.id && (!showLowOnly || (item.active && item.isLow)),
+                (item) => item.category_id === category.id,
               );
-              if (showLowOnly && items.length === 0) return null;
               return (
                 <section
                   key={category.id}
@@ -299,7 +283,7 @@ export default function StockPage() {
                     ))}
                   </ul>
 
-                  {category.active && !showLowOnly && (
+                  {category.active && (
                     <button
                       type="button"
                       onClick={() => openItemForm(undefined, category.id)}

@@ -342,9 +342,11 @@ export default function TeamPage() {
 
   return (
     <>
-      <div className="flex flex-wrap items-end justify-between gap-4 border-b border-ink pt-6 pb-3">
-        {/* The week is the big heading; the page name is only read out by screen readers. */}
-        <div className="flex min-w-0 flex-wrap items-center gap-x-4">
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 border-b border-ink pt-6 pb-3 sm:items-end">
+        {/* The week is the big heading; the page name is only read out by screen readers.
+            On a phone this group dissolves: the week takes the first line, and the
+            state word sits on the second line, left of the buttons. */}
+        <div className="flex min-w-0 flex-wrap items-center gap-x-4 max-sm:contents">
           <h1 className="sr-only">Team</h1>
           <TitleStepper
             label={formatWeekRange(weekStart)}
@@ -367,12 +369,12 @@ export default function TeamPage() {
           />
           {/* One handwritten word, no box or dot: green once the staff can see the week. */}
           {week.data && canPublish && (
-            <span className={"font-hand text-4xl leading-none font-bold " + (week.data.published ? "text-matcha" : "text-ink/50")}>
+            <span className={"font-hand text-[1.6rem] leading-none font-bold sm:text-4xl " + (week.data.published ? "text-matcha" : "text-ink/50")}>
               {week.data.published ? "Published" : "Draft"}
             </span>
           )}
         </div>
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="ml-auto flex items-center gap-2 sm:gap-3">
           <button
             type="button"
             aria-label="Opening hours"
@@ -403,7 +405,7 @@ export default function TeamPage() {
                 disabled={setPublished.isPending}
                 onClick={() => setPublished.mutate(!week.data.published)}
                 className={
-                  "flex h-11 items-center border px-5 font-label text-lg font-semibold tracking-[0.06em] uppercase disabled:opacity-50 " +
+                  "flex h-11 items-center border px-3 font-label text-base font-semibold tracking-[0.06em] uppercase disabled:opacity-50 sm:px-5 sm:text-lg " +
                   (week.data.published
                     ? "border-ink/30 bg-white hover:bg-ink hover:text-paper"
                     : "border-ink bg-ink text-paper hover:bg-sage hover:text-ink")

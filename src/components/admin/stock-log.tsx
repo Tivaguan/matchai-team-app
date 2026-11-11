@@ -77,9 +77,9 @@ export function StockLog({ initialItemId, onBack }: StockLogProps) {
 
   return (
     <>
-      <div className="flex flex-wrap items-end justify-between gap-4 border-b border-ink pt-6 pb-3">
+      <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3 border-b border-ink pt-6 pb-3">
         {/* The month is the big heading; the page name is only read out by screen readers. */}
-        <div className="flex min-w-0 flex-col">
+        <div className="flex min-w-0 flex-col max-sm:w-full">
           <h1 className="sr-only">Stock log</h1>
           <TitleStepper
             label={formatMonth(month)}
@@ -100,10 +100,10 @@ export function StockLog({ initialItemId, onBack }: StockLogProps) {
           />
         </div>
         {/* One line only: the filters and the way back sit to the right of the month. */}
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-3 max-sm:w-full sm:flex-wrap">
           <Picker
             id="log-item"
-            className="min-w-32"
+            className="min-w-0 flex-1 sm:min-w-32 sm:flex-none"
             value={itemId}
             onChange={setItemId}
             options={[
@@ -113,7 +113,7 @@ export function StockLog({ initialItemId, onBack }: StockLogProps) {
           />
           <Picker
             id="log-employee"
-            className="min-w-32"
+            className="min-w-0 flex-1 sm:min-w-32 sm:flex-none"
             value={employeeId}
             onChange={setEmployeeId}
             options={[
@@ -124,10 +124,11 @@ export function StockLog({ initialItemId, onBack }: StockLogProps) {
           <button
             type="button"
             onClick={onBack}
-            className="flex h-11 items-center gap-2 border border-ink/30 bg-white px-4 text-base font-medium hover:bg-ink hover:text-paper"
+            aria-label="Back to stock"
+            className="flex h-11 shrink-0 items-center gap-2 border border-ink/30 bg-white px-4 text-base font-medium hover:bg-ink hover:text-paper max-sm:order-first max-sm:w-11 max-sm:justify-center max-sm:px-0"
           >
             <ArrowLeft className="size-4" aria-hidden="true" />
-            Stock
+            <span className="max-sm:hidden">Stock</span>
           </button>
         </div>
       </div>
@@ -139,8 +140,34 @@ export function StockLog({ initialItemId, onBack }: StockLogProps) {
       )}
 
       {changes.data && changes.data.length > 0 && (
-        <div className="overflow-x-auto bg-white">
-          <table className="w-full min-w-[44rem] border-collapse text-left">
+        <>
+        {/* Phone: two lines per change, nothing to slide sideways. */}
+        <ul className="flex flex-col bg-white tabular-nums md:hidden">
+          {changes.data.map((row) => {
+            const unit = row.stock_items?.unit ?? "";
+            return (
+              <li key={row.id} className="flex flex-col gap-1 border-b border-dashed border-ink/20 px-5 py-3 last:border-b-0">
+                <span className="flex items-baseline justify-between gap-3">
+                  <span className="min-w-0 truncate text-lg">{row.stock_items?.name ?? "Unknown"}</span>
+                  <span className="font-label text-xl font-semibold whitespace-nowrap">
+                    {row.amount > 0 ? "+" : "−"}
+                    {formatQuantity(Math.abs(row.amount), unit)}
+                  </span>
+                </span>
+                <span className="flex items-baseline justify-between gap-3 text-sm text-ink/60">
+                  <span className="min-w-0 truncate">
+                    {row.employees?.name ?? "Unknown"} · {formatWhen(row.created_at)}
+                  </span>
+                  <span className="whitespace-nowrap">
+                    {formatQuantity(row.quantity_before, "")} → {formatQuantity(row.quantity_after, unit)}
+                  </span>
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+        <div className="hidden bg-white md:block">
+          <table className="w-full border-collapse text-left">
             <thead>
               <tr className="border-b border-ink/30 font-label text-base tracking-[0.1em] text-ink/60 uppercase">
                 <th className="py-3 pr-4 pl-5 font-medium">When</th>
@@ -171,6 +198,7 @@ export function StockLog({ initialItemId, onBack }: StockLogProps) {
             </tbody>
           </table>
         </div>
+        </>
       )}
     </>
   );

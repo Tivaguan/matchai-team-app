@@ -92,7 +92,8 @@ export function TitleStepper({ label, onPrevious, onNext, previousLabel, nextLab
   const arrowClass = "flex size-9 shrink-0 items-center justify-center hover:bg-ink hover:text-paper sm:size-11";
   const titleClass = "px-1 font-serif text-3xl leading-none whitespace-nowrap uppercase lining-nums sm:px-2 sm:text-5xl";
   return (
-    <div className="-ml-2 flex items-center sm:-ml-3">
+    // On a phone the title takes the whole line: arrows at the edges, the period centered.
+    <div className="-mx-2 flex w-[calc(100%+1rem)] items-center justify-between sm:mr-0 sm:-ml-3 sm:w-auto sm:justify-start">
       <button type="button" className={arrowClass} onClick={onPrevious} aria-label={previousLabel}>
         <ChevronLeft className="size-6" aria-hidden="true" />
       </button>
@@ -100,7 +101,7 @@ export function TitleStepper({ label, onPrevious, onNext, previousLabel, nextLab
         <Popover.Root open={open} onOpenChange={setOpen}>
           <Popover.Trigger
             aria-label={`${label}. ${popupLabel ?? "Pick a date"}`}
-            className={`${titleClass} py-1 hover:bg-ink/10 data-[popup-open]:bg-ink/10`}
+            className={`${titleClass} min-w-0 py-1 hover:bg-ink/10 data-[popup-open]:bg-ink/10`}
           >
             {label}
           </Popover.Trigger>
