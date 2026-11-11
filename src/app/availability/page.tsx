@@ -1,13 +1,14 @@
 "use client";
 
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Plus, X } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { PinPad } from "@/components/counter/pin-pad";
 import { Picker } from "@/components/picker";
 import { PublicShell } from "@/components/public-shell";
 import { formatTime } from "@/lib/format";
+import { reportStaffEvent } from "@/lib/notify";
 import { supabase } from "@/lib/supabase/client";
 import { useShopToday } from "@/lib/use-shop-today";
 import {
@@ -15,7 +16,11 @@ import {
   DEFAULT_FROM,
   DEFAULT_TO,
   formatWeekRange,
+  MAX_FREE_PERIODS,
   mondayOf,
+  nextPeriod,
+  type Period,
+  periodsProblem,
   shortDate,
   TIME_OPTIONS,
   weekdayName,
@@ -23,7 +28,8 @@ import {
 } from "@/lib/week";
 
 type Employee = { id: string; name: string };
-type DayAnswer = { day: string; free: boolean; from: string; to: string };
+/** A free day has one to three periods, e.g. between classes. */
+type DayAnswer = { day: string; free: boolean; periods: Period[] };
 
 type LoadResult =
   | { ok: true; published: boolean; days: { day: string; not_available: boolean; from: string | null; to: string | null }[] }
@@ -78,17 +84,23 @@ export default function AvailabilityPage() {
     },
     onSuccess: (result, input) => {
       if (!result.ok) {
+        if (result.error === "locked") reportStaffEvent({ type: "employee_locked", employeeId: input.employeeId });
         setPinError(pinMessage(result));
         setPadKey((key) => key + 1);
         return;
       }
       // Start from "not available" every day, then fill in what was saved before.
-      const savedDays = new Map(result.days.map((row) => [row.day, row]));
       setAnswers(
         weekDays(input.weekStart).map((day) => {
-          const row = savedDays.get(day);
-          const free = row ? !row.not_available : false;
-          return { day, free, from: row?.from ?? DEFAULT_FROM, to: row?.to ?? DEFAULT_TO };
+          const periods = result.days
+            .filter((row) => row.day === day && !row.not_available && row.from && row.to)
+            .map((row) => ({ from: row.from!, to: row.to! }))
+            .slice(0, MAX_FREE_PERIODS);
+          return {
+            day,
+            free: periods.length > 0,
+            periods: periods.length > 0 ? periods : [{ from: DEFAULT_FROM, to: DEFAULT_TO }],
+          };
         }),
       );
       setPublished(result.published);
@@ -106,10 +118,10 @@ export default function AvailabilityPage() {
         p_employee_id: employee!.id,
         p_pin: pin!,
         p_week_start: weekStart!,
-        p_days: answers!.map((answer) =>
+        p_days: answers!.flatMap((answer): { day: string; not_available: boolean; from?: string; to?: string }[] =>
           answer.free
-            ? { day: answer.day, not_available: false, from: answer.from, to: answer.to }
-            : { day: answer.day, not_available: true },
+            ? answer.periods.map((period) => ({ day: answer.day, not_available: false, from: period.from, to: period.to }))
+            : [{ day: answer.day, not_available: true }],
         ),
       });
       if (error) throw error;
@@ -117,11 +129,15 @@ export default function AvailabilityPage() {
     },
     onSuccess: (result) => {
       if (result.ok) {
+        // The owners hear about it once the last person has answered.
+        reportStaffEvent({ type: "all_answered", weekStart: weekStart! });
         setSaved(true);
       } else if (result.error === "week_published") {
         setPublished(true);
       } else if (result.error === "invalid_hours") {
         setSaveError("Check your hours: the end must be after the start.");
+      } else if (result.error === "overlapping_hours") {
+        setSaveError("Check your hours: two periods of the same day overlap.");
       } else {
         setSaveError("Could not save. Go back and try again.");
       }
@@ -134,6 +150,12 @@ export default function AvailabilityPage() {
     setSaveError(null);
   }
 
+  function updatePeriod(answer: DayAnswer, index: number, change: Partial<Period>) {
+    update(answer.day, {
+      periods: answer.periods.map((period, position) => (position === index ? { ...period, ...change } : period)),
+    });
+  }
+
   function startOver() {
     setEmployee(null);
     setPin(null);
@@ -143,7 +165,7 @@ export default function AvailabilityPage() {
     setSaveError(null);
   }
 
-  const hoursValid = answers?.every((answer) => !answer.free || answer.from < answer.to) ?? false;
+  const hoursValid = answers?.every((answer) => !answer.free || periodsProblem(answer.periods) === null) ?? false;
 
   return (
     <PublicShell title="Availability">
@@ -262,25 +284,48 @@ export default function AvailabilityPage() {
                   </div>
                 </div>
 
-                {answer.free && (
-                  <div className="flex items-center gap-3">
-                    <Picker
-                      className="min-w-0 flex-1"
-                      value={answer.from}
-                      onChange={(from) => update(answer.day, { from })}
-                      options={TIME_OPTIONS}
-                    />
-                    <span className={`${noteClass} text-base text-ink/60`}>to</span>
-                    <Picker
-                      className="min-w-0 flex-1"
-                      value={answer.to}
-                      onChange={(to) => update(answer.day, { to })}
-                      options={TIME_OPTIONS}
-                    />
-                  </div>
+                {answer.free &&
+                  answer.periods.map((period, index) => (
+                    <div key={index} className="flex items-center gap-3">
+                      <Picker
+                        className="min-w-0 flex-1"
+                        value={period.from}
+                        onChange={(from) => updatePeriod(answer, index, { from })}
+                        options={TIME_OPTIONS}
+                      />
+                      <span className={`${noteClass} text-base text-ink/60`}>to</span>
+                      <Picker
+                        className="min-w-0 flex-1"
+                        value={period.to}
+                        onChange={(to) => updatePeriod(answer, index, { to })}
+                        options={TIME_OPTIONS}
+                      />
+                      {/* Every row gets the × once there are two, so the rows line up. */}
+                      {answer.periods.length > 1 && (
+                        <button
+                          type="button"
+                          aria-label="Remove this period"
+                          onClick={() => update(answer.day, { periods: answer.periods.filter((_, position) => position !== index) })}
+                          className="flex size-11 shrink-0 touch-manipulation items-center justify-center border border-ink/30 text-ink/60 active:bg-ink active:text-paper"
+                        >
+                          <X className="size-5" aria-hidden="true" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                {/* Free more than once in a day, e.g. the morning and again the evening. */}
+                {answer.free && answer.periods.length < MAX_FREE_PERIODS && (
+                  <button
+                    type="button"
+                    onClick={() => update(answer.day, { periods: [...answer.periods, nextPeriod(answer.periods)] })}
+                    className="flex touch-manipulation items-center gap-2 self-start py-1 text-base text-ink/60 active:text-ink"
+                  >
+                    <Plus className="size-4" aria-hidden="true" />
+                    Add another period
+                  </button>
                 )}
-                {answer.free && answer.from >= answer.to && (
-                  <p className="text-sm font-medium text-destructive">The end must be after the start.</p>
+                {answer.free && periodsProblem(answer.periods) && (
+                  <p className="text-sm font-medium text-destructive">{periodsProblem(answer.periods)}</p>
                 )}
               </li>
             ))}

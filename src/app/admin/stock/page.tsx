@@ -1,12 +1,14 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { History, Plus } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Picker } from "@/components/picker";
+import { StockLog } from "@/components/admin/stock-log";
+import { IconMenu, Picker, Switch } from "@/components/picker";
 import { formatQuantity } from "@/lib/format";
 import { supabase } from "@/lib/supabase/client";
 
@@ -70,6 +72,11 @@ export default function StockPage() {
   const [categoryForm, setCategoryForm] = useState<{ id: string | null; name: string } | null>(null);
   const [itemForm, setItemForm] = useState<ItemForm | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+  const [onlyLow, setOnlyLow] = useState(false);
+  // Delete asks for a second tap before it happens.
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  // The log is a view of its own, opened from the Log button or from one item.
+  const [logItemId, setLogItemId] = useState<string | null>(null);
 
   const saveCategory = useMutation({
     mutationFn: async (form: { id: string | null; name: string }) => {
@@ -115,6 +122,27 @@ export default function StockPage() {
     onSuccess: refresh,
   });
 
+  const remove = useMutation({
+    mutationFn: async (target: { table: "stock_items" | "stock_categories"; id: string }) => {
+      const { error } = await supabase.from(target.table).delete().eq("id", target.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setItemForm(null);
+      setCategoryForm(null);
+      setConfirmDelete(false);
+      refresh();
+    },
+    onError: (_error, target) => {
+      setConfirmDelete(false);
+      setFormError(
+        target.table === "stock_items"
+          ? "This item has stock changes in the log, so it cannot be deleted. Hide it instead."
+          : "This category still has items. Delete or move its items first, or hide the category.",
+      );
+    },
+  });
+
   const activeCategories = data?.categories.filter((category) => category.active) ?? [];
   const itemReady =
     itemForm !== null &&
@@ -125,6 +153,7 @@ export default function StockPage() {
 
   function openItemForm(item?: Item, categoryId?: string) {
     setFormError(null);
+    setConfirmDelete(false);
     setItemForm(
       item
         ? {
@@ -146,25 +175,62 @@ export default function StockPage() {
     );
   }
 
+  const activeItems = data?.items.filter((item) => item.active) ?? [];
+  const lowItems = activeItems.filter((item) => item.isLow);
+  const showLowOnly = onlyLow;
+  const editedCategory = data?.categories.find((category) => category.id === categoryForm?.id) ?? null;
+  const editedItem = data?.items.find((item) => item.id === itemForm?.id) ?? null;
+  const linkClass = "self-start text-base text-ink/70 underline underline-offset-4 hover:text-ink";
+  // A row is exactly as wide as the lines around it; its text sits a little inside.
+  const rowClass =
+    "flex w-full justify-between gap-3 px-3 text-left hover:bg-ink/5 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring";
+
+  if (logItemId !== null) {
+    return <StockLog key={logItemId} initialItemId={logItemId} onBack={() => setLogItemId(null)} />;
+  }
+
   return (
     <>
-      <div className="flex flex-wrap items-end justify-between gap-4 border-b border-ink pb-3">
-        <h1 className="font-serif text-5xl leading-none uppercase">Stock</h1>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            className="h-11 px-5 text-base"
-            onClick={() => {
-              setFormError(null);
-              setCategoryForm({ id: null, name: "" });
-            }}
-          >
-            Add category
-          </Button>
-          <Button className="h-11 px-5 text-base" disabled={activeCategories.length === 0} onClick={() => openItemForm()}>
-            Add item
-          </Button>
+      {/* No title: the top bar already says Stock. Left: the add button and which items to show. Right: the log. */}
+      {/* sm:min-h-14 matches the big date title on Cash and the Log, so the line sits at the same height on every page. */}
+      <div className="box-content flex flex-wrap items-end justify-between gap-3 border-b border-ink pt-6 pb-3 sm:min-h-14">
+        <h1 className="sr-only">Stock</h1>
+        <div className="flex items-center gap-3">
+          <IconMenu
+            label="Add an item or a category"
+            tone="solid"
+            align="start"
+            icon={<Plus className="size-5" aria-hidden="true" />}
+            items={[
+              { label: "New item", disabled: activeCategories.length === 0, onSelect: () => openItemForm() },
+              {
+                label: "New category",
+                onSelect: () => {
+                  setFormError(null);
+                  setConfirmDelete(false);
+                  setCategoryForm({ id: null, name: "" });
+                },
+              },
+            ]}
+          />
+          <Switch
+            label="Show every item or only the low ones"
+            value={showLowOnly ? "low" : "all"}
+            onChange={(next) => setOnlyLow(next === "low")}
+            options={[
+              { value: "all", label: `All ${activeItems.length}` },
+              { value: "low", label: `Low ${lowItems.length}` },
+            ]}
+          />
         </div>
+        <button
+          type="button"
+          onClick={() => setLogItemId("all")}
+          className="flex h-11 items-center gap-2 border border-ink/30 bg-white px-4 text-base font-medium hover:bg-ink hover:text-paper"
+        >
+          <History className="size-4" aria-hidden="true" />
+          Log
+        </button>
       </div>
 
       {isPending && <p className="text-muted-foreground">Loading stock.</p>}
@@ -175,89 +241,80 @@ export default function StockPage() {
         </p>
       )}
 
-      {data?.categories.map((category) => {
-        const items = data.items.filter((item) => item.category_id === category.id);
-        return (
-          <section key={category.id} className="flex flex-col">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-ink/40 pb-2">
-              <h2
-                className={
-                  "font-label text-3xl font-semibold tracking-[0.06em] uppercase " +
-                  (category.active ? "" : "text-ink/40 line-through")
-                }
-              >
-                {category.name}
-              </h2>
-              <div className="flex flex-wrap gap-2">
-                {category.active && (
-                  <Button variant="ghost" className="h-9 px-3" onClick={() => openItemForm(undefined, category.id)}>
-                    Add item here
-                  </Button>
-                )}
-                <Button
-                  variant="ghost"
-                  className="h-9 px-3"
-                  onClick={() => {
-                    setFormError(null);
-                    setCategoryForm({ id: category.id, name: category.name });
-                  }}
-                >
-                  Rename
-                </Button>
-                <Button
-                  variant="ghost"
-                  className="h-9 px-3"
-                  onClick={() => setActive.mutate({ table: "stock_categories", id: category.id, active: !category.active })}
-                >
-                  {category.active ? "Hide" : "Show again"}
-                </Button>
-              </div>
-            </div>
+      {data && data.categories.length > 0 && (
+        <>
+          {showLowOnly && lowItems.length === 0 && <p className="text-ink/60">Nothing is low right now.</p>}
 
-            {items.length === 0 && <p className="py-3 text-ink/60">No items in this category yet.</p>}
-
-            <ul className="flex flex-col">
-              {items.map((item) => (
-                <li
-                  key={item.id}
-                  className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-b border-ink/15 py-3"
+          {/* One card per category, laid out like the cards of the shop's menu. */}
+          <div className={"gap-5 md:columns-2 " + (data.categories.length > 4 ? "lg:columns-3" : "")}>
+            {data.categories.map((category) => {
+              const items = data.items.filter(
+                (item) => item.category_id === category.id && (!showLowOnly || (item.active && item.isLow)),
+              );
+              if (showLowOnly && items.length === 0) return null;
+              return (
+                <section
+                  key={category.id}
+                  className={"mb-5 flex break-inside-avoid flex-col bg-white px-5 pt-3 pb-2 " + (category.active ? "" : "opacity-60")}
                 >
-                  <div className="flex min-w-0 flex-col">
-                    <span className="flex flex-wrap items-center gap-3">
-                      <span className={"text-lg font-medium " + (item.active ? "" : "text-ink/40 line-through")}>
-                        {item.name}
-                      </span>
-                      {item.active && item.isLow && (
-                        <span className="bg-destructive px-2 py-0.5 text-sm font-medium text-white">Low</span>
-                      )}
-                      {!item.active && <span className="border border-ink/30 px-2 py-0.5 text-sm text-ink/60">Hidden</span>}
-                    </span>
-                    <span className="text-sm text-ink/60">
-                      Low below {formatQuantity(item.low_stock_level, item.unit)} · started at{" "}
-                      {formatQuantity(item.starting_quantity, item.unit)}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <span className="font-label text-2xl font-semibold tabular-nums">
-                      {formatQuantity(item.current, item.unit)}
-                    </span>
-                    <Button variant="outline" className="h-9 px-3" onClick={() => openItemForm(item)}>
-                      Edit
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      className="h-9 px-3"
-                      onClick={() => setActive.mutate({ table: "stock_items", id: item.id, active: !item.active })}
+                  <div className="border-b border-ink">
+                    <button
+                      type="button"
+                      title="Rename, hide or delete this category"
+                      onClick={() => {
+                        setFormError(null);
+                        setConfirmDelete(false);
+                        setCategoryForm({ id: category.id, name: category.name });
+                      }}
+                      className={`${rowClass} items-baseline py-2.5`}
                     >
-                      {item.active ? "Hide" : "Show again"}
-                    </Button>
+                      <span className="font-label text-2xl font-semibold tracking-[0.06em] uppercase">{category.name}</span>
+                      <span className="text-sm text-ink/50">{category.active ? `${items.length}` : "Hidden"}</span>
+                    </button>
                   </div>
-                </li>
-              ))}
-            </ul>
-          </section>
-        );
-      })}
+
+                  <ul className="flex flex-col">
+                    {items.map((item) => (
+                      <li key={item.id} className="border-b border-dashed border-ink/20">
+                        <button type="button" onClick={() => openItemForm(item)} className={`${rowClass} items-baseline py-3`}>
+                          <span className="flex min-w-0 flex-wrap items-baseline gap-x-2">
+                            <span className={"text-lg " + (item.active ? "" : "text-ink/40 line-through")}>{item.name}</span>
+                            {item.active && item.isLow && (
+                              <span className="font-label text-sm font-semibold tracking-[0.1em] text-destructive uppercase">
+                                Low
+                              </span>
+                            )}
+                            {!item.active && <span className="text-sm text-ink/50">Hidden</span>}
+                          </span>
+                          <span
+                            className={
+                              "shrink-0 font-label text-2xl font-semibold tabular-nums " +
+                              (item.active && item.isLow ? "text-destructive" : "")
+                            }
+                          >
+                            {formatQuantity(item.current, item.unit)}
+                          </span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+
+                  {category.active && !showLowOnly && (
+                    <button
+                      type="button"
+                      onClick={() => openItemForm(undefined, category.id)}
+                      className={`${rowClass} items-center justify-start gap-2 py-3 text-ink/50 hover:text-ink`}
+                    >
+                      <Plus className="size-4" aria-hidden="true" />
+                      Add item
+                    </button>
+                  )}
+                </section>
+              );
+            })}
+          </div>
+        </>
+      )}
 
       <Dialog open={categoryForm !== null} onOpenChange={(open) => !open && setCategoryForm(null)}>
         <DialogContent>
@@ -283,13 +340,40 @@ export default function StockPage() {
               />
             </div>
             {formError && <p className="text-sm text-destructive">{formError}</p>}
+            {editedCategory && (
+              <button
+                type="button"
+                className={linkClass}
+                onClick={() => {
+                  setActive.mutate({ table: "stock_categories", id: editedCategory.id, active: !editedCategory.active });
+                  setCategoryForm(null);
+                }}
+              >
+                {editedCategory.active ? "Hide this category from the iPad" : "Show this category on the iPad again"}
+              </button>
+            )}
             <DialogFooter>
+              {editedCategory && (
+                <Button
+                  type="button"
+                  variant="destructive"
+                  className="h-11 px-5 text-lg sm:mr-auto"
+                  disabled={remove.isPending}
+                  onClick={() =>
+                    confirmDelete
+                      ? remove.mutate({ table: "stock_categories", id: editedCategory.id })
+                      : setConfirmDelete(true)
+                  }
+                >
+                  {confirmDelete ? "Tap again to delete" : "Delete"}
+                </Button>
+              )}
               <Button
                 type="submit"
-                className="h-11 px-5 text-base"
+                className="h-11 px-5 text-lg"
                 disabled={!categoryForm || categoryForm.name.trim() === "" || saveCategory.isPending}
               >
-                Save category
+                Save
               </Button>
             </DialogFooter>
           </form>
@@ -301,7 +385,9 @@ export default function StockPage() {
           <DialogHeader>
             <DialogTitle>{itemForm?.id ? "Edit item" : "Add item"}</DialogTitle>
             <DialogDescription>
-              The current quantity is the starting quantity plus every change logged on the iPad.
+              {editedItem
+                ? `In stock now: ${formatQuantity(editedItem.current, editedItem.unit)}. That is the starting quantity plus every change logged on the iPad.`
+                : "The current quantity is the starting quantity plus every change logged on the iPad."}
             </DialogDescription>
           </DialogHeader>
           <form
@@ -333,7 +419,7 @@ export default function StockPage() {
                   .map((category) => ({ value: category.id, label: category.name }))}
               />
             </div>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-3 items-end gap-3">
               <div className="flex flex-col gap-2">
                 <Label htmlFor="item-unit">Unit</Label>
                 <Input
@@ -346,7 +432,7 @@ export default function StockPage() {
                 />
               </div>
               <div className="flex flex-col gap-2">
-                <Label htmlFor="item-starting">Starting quantity</Label>
+                <Label htmlFor="item-starting" className="whitespace-nowrap">Starting qty</Label>
                 <Input
                   id="item-starting"
                   inputMode="decimal"
@@ -357,7 +443,7 @@ export default function StockPage() {
                 />
               </div>
               <div className="flex flex-col gap-2">
-                <Label htmlFor="item-low">Low below</Label>
+                <Label htmlFor="item-low" className="whitespace-nowrap">Low below</Label>
                 <Input
                   id="item-low"
                   inputMode="decimal"
@@ -369,9 +455,46 @@ export default function StockPage() {
               </div>
             </div>
             {formError && <p className="text-sm text-destructive">{formError}</p>}
+            {editedItem && (
+              <div className="flex flex-wrap gap-x-6 gap-y-2">
+                <button
+                  type="button"
+                  className={linkClass}
+                  onClick={() => {
+                    setItemForm(null);
+                    setLogItemId(editedItem.id);
+                  }}
+                >
+                  See this item's log
+                </button>
+                <button
+                  type="button"
+                  className={linkClass}
+                  onClick={() => {
+                    setActive.mutate({ table: "stock_items", id: editedItem.id, active: !editedItem.active });
+                    setItemForm(null);
+                  }}
+                >
+                  {editedItem.active ? "Hide from the iPad" : "Show on the iPad again"}
+                </button>
+              </div>
+            )}
             <DialogFooter>
-              <Button type="submit" className="h-11 px-5 text-base" disabled={!itemReady || saveItem.isPending}>
-                Save item
+              {editedItem && (
+                <Button
+                  type="button"
+                  variant="destructive"
+                  className="h-11 px-5 text-lg sm:mr-auto"
+                  disabled={remove.isPending}
+                  onClick={() =>
+                    confirmDelete ? remove.mutate({ table: "stock_items", id: editedItem.id }) : setConfirmDelete(true)
+                  }
+                >
+                  {confirmDelete ? "Tap again to delete" : "Delete"}
+                </Button>
+              )}
+              <Button type="submit" className="h-11 px-5 text-lg" disabled={!itemReady || saveItem.isPending}>
+                Save
               </Button>
             </DialogFooter>
           </form>

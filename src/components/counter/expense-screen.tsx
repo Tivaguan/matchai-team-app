@@ -3,6 +3,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { formatMoney } from "@/lib/format";
+import { requestAlert } from "@/lib/notify";
 import { supabase } from "@/lib/supabase/client";
 import { AmountPad } from "./amount-pad";
 import { type ActionResult, type Actor, errorMessage, noteClass, primaryButtonClass } from "./shared";
@@ -30,8 +31,12 @@ export function ExpenseScreen({ actor, onSaved }: ExpenseScreenProps) {
       return data as ActionResult;
     },
     onSuccess: (result) => {
-      if (result.ok) onSaved(`Expense saved · ${formatMoney(amount)}`);
-      else setError(errorMessage(result.error));
+      if (result.ok) {
+        void requestAlert({ type: "expense_logged" });
+        onSaved(`Expense saved · ${formatMoney(amount)}`);
+      } else {
+        setError(errorMessage(result.error));
+      }
     },
     onError: () => setError("No connection · try again"),
   });

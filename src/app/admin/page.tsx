@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
-// The backoffice home. Until the day and month views exist, it opens the Cash page.
+// The backoffice home opens on today.
 export default function AdminHome() {
   const router = useRouter();
   useEffect(() => {

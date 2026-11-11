@@ -203,6 +203,21 @@ export type Database = {
           },
         ]
       }
+      notification_log: {
+        Row: {
+          key: string
+          sent_at: string
+        }
+        Insert: {
+          key: string
+          sent_at?: string
+        }
+        Update: {
+          key?: string
+          sent_at?: string
+        }
+        Relationships: []
+      }
       notification_settings: {
         Row: {
           alert: Database["public"]["Enums"]["notification_alert"]
@@ -228,6 +243,27 @@ export type Database = {
             referencedColumns: ["user_id"]
           },
         ]
+      }
+      opening_hours: {
+        Row: {
+          closed: boolean
+          open_from: string
+          open_to: string
+          weekday: number
+        }
+        Insert: {
+          closed?: boolean
+          open_from?: string
+          open_to?: string
+          weekday: number
+        }
+        Update: {
+          closed?: boolean
+          open_from?: string
+          open_to?: string
+          weekday?: number
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -561,6 +597,11 @@ export type Database = {
         | "day_closed"
         | "expense_logged"
         | "availability_reminder"
+        | "day_opened"
+        | "drawer_mismatch"
+        | "all_answered"
+        | "employee_locked"
+        | "day_not_closed"
       user_role: "owner" | "counter"
     }
     CompositeTypes: {
@@ -698,6 +739,11 @@ export const Constants = {
         "day_closed",
         "expense_logged",
         "availability_reminder",
+        "day_opened",
+        "drawer_mismatch",
+        "all_answered",
+        "employee_locked",
+        "day_not_closed",
       ],
       user_role: ["owner", "counter"],
     },

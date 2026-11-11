@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Splash } from "@/components/role-gate";
 import { homeFor, SESSION_KEY, useSession } from "@/lib/session";
+import { markUnlocked } from "@/lib/app-lock";
 import { supabase } from "@/lib/supabase/client";
 
 const fieldClass =
@@ -41,10 +42,20 @@ export default function LoginPage() {
     const current = queryClient.getQueryData(SESSION_KEY);
     if (!current) {
       // A valid login that is neither an owner nor the counter iPad.
-      await supabase.auth.signOut();
+      await supabase.auth.signOut({ scope: "local" });
       setError("This account has no access to the app.");
       setBusy(false);
+      return;
     }
+
+    // The password is the way in when Face ID fails, so it also opens the app lock.
+    markUnlocked();
+
+    // The app keeps this page in memory, so empty the form now:
+    // otherwise the email and password would still be filled in after a sign-out.
+    setEmail("");
+    setPassword("");
+    setBusy(false);
   }
 
   if (isPending || session) return <Splash />;

@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { formatQuantity } from "@/lib/format";
+import { requestAlert } from "@/lib/notify";
 import { supabase } from "@/lib/supabase/client";
 import { AmountPad } from "./amount-pad";
 import { type ActionResult, type Actor, errorMessage, labelClass, noteClass, primaryButtonClass } from "./shared";
@@ -53,6 +54,8 @@ export function StockScreen({ actor }: { actor: Actor }) {
         setAmount("");
         setNote({ text: `Saved · now ${formatQuantity(Number(result.quantity_after), item.unit)}`, isError: false });
         queryClient.invalidateQueries({ queryKey: STOCK_KEY });
+        // Tell the owners when this change made the item go below its low level.
+        if (result.became_low) void requestAlert({ type: "low_stock", itemId: item.item_id });
       } else if (result.error === "not_enough_stock") {
         setNote({ text: `Only ${formatQuantity(Number(result.current_quantity), item.unit)} left`, isError: true });
       } else {

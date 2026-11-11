@@ -63,6 +63,36 @@ try {
   res = await save([answers[0], answers[0]]);
   check("the same day twice is refused", res.data?.error === "invalid_days", show(res));
 
+  // --- Several periods in one day -------------------------------------------------
+  const morning = { day: TUESDAY, from: "09:00", to: "11:00" };
+  const evening = { day: TUESDAY, from: "16:00", to: "19:00" };
+  res = await save([morning, { day: TUESDAY, from: "10:30", to: "14:00" }]);
+  check("two periods that overlap are refused", res.data?.error === "overlapping_hours", show(res));
+  const night = { day: TUESDAY, from: "20:00", to: "22:00" };
+  res = await save([morning, evening, night, { day: TUESDAY, from: "12:00", to: "13:00" }]);
+  check("four periods in one day are refused", res.data?.error === "invalid_days", show(res));
+  res = await save([night, morning, evening]);
+  const thrice = await visitor.rpc("get_my_availability", who);
+  check(
+    "three separate periods in one day are saved",
+    res.data?.ok === true && thrice.data?.days.length === 3 && thrice.data.days[2].from === "20:00",
+    show(thrice),
+  );
+  res = await save([morning, { day: TUESDAY, not_available: true }]);
+  check("free and not free on the same day is refused", res.data?.error === "invalid_days", show(res));
+  res = await save([evening, morning]);
+  const twice = await visitor.rpc("get_my_availability", who);
+  check(
+    "two separate periods in one day are saved, earliest first",
+    res.data?.ok === true &&
+      twice.data?.days.length === 2 &&
+      twice.data.days[0].from === "09:00" &&
+      twice.data.days[0].to === "11:00" &&
+      twice.data.days[1].from === "16:00" &&
+      twice.data.days[1].to === "19:00",
+    show(twice),
+  );
+
   res = await save(answers);
   check("visitor with the right PIN can save availability", res.data?.ok === true, show(res));
   res = await visitor.rpc("get_my_availability", who);
@@ -98,6 +128,12 @@ try {
     .select("id");
   check("owner can assign a shift", !res.error && res.data.length === 1, res.error?.message);
 
+  res = await owner
+    .from("shifts")
+    .insert({ employee_id: employeeId, day: TUESDAY, from_time: "20:00", to_time: "22:00" })
+    .select("id");
+  check("owner can assign a second shift on the same day", !res.error && res.data.length === 1, res.error?.message);
+
   res = await visitor.rpc("get_published_schedule", { p_week_start: WEEK });
   check("an unpublished week shows nothing", res.data?.published === false && res.data.shifts.length === 0, show(res));
   res = await visitor.from("shifts").select("id").limit(1);
@@ -109,12 +145,14 @@ try {
   check("owner can publish the week", !res.error, res.error?.message);
   res = await visitor.rpc("get_published_schedule", { p_week_start: WEEK });
   check(
-    "the published week shows the shift",
+    "the published week shows both shifts, earliest first",
     res.data?.published === true &&
-      res.data.shifts.length === 1 &&
+      res.data.shifts.length === 2 &&
       res.data.shifts[0].name === "Zz Schedule Test" &&
       res.data.shifts[0].from === "13:00" &&
-      res.data.shifts[0].to === "19:00",
+      res.data.shifts[0].to === "19:00" &&
+      res.data.shifts[1].from === "20:00" &&
+      res.data.shifts[1].to === "22:00",
     show(res),
   );
   res = await save(answers);

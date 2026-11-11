@@ -73,11 +73,18 @@ export default function SchedulePage() {
                   </span>
                 </div>
                 {shifts.length === 0 && <p className="text-ink/60">Nobody scheduled</p>}
-                {shifts.map((shift) => (
-                  <p key={`${shift.name}-${shift.from}`} className="flex items-baseline justify-between gap-3 text-lg">
-                    <span className="font-medium">{shift.name}</span>
-                    <span className="tabular-nums">
-                      {shift.from} – {shift.to}
+                {/* One line per person; someone with two shifts that day shows both, earliest first. */}
+                {[...new Set(shifts.map((shift) => shift.name))].map((name) => (
+                  <p key={name} className="flex items-baseline justify-between gap-3 text-lg">
+                    <span className="font-medium">{name}</span>
+                    <span className="flex flex-col items-end tabular-nums">
+                      {shifts
+                        .filter((shift) => shift.name === name)
+                        .map((shift) => (
+                          <span key={shift.from}>
+                            {shift.from} – {shift.to}
+                          </span>
+                        ))}
                     </span>
                   </p>
                 ))}

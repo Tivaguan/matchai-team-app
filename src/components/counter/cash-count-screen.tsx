@@ -4,6 +4,7 @@ import { useMutation } from "@tanstack/react-query";
 import { Delete } from "lucide-react";
 import { useState } from "react";
 import { formatAmount, formatMoney } from "@/lib/format";
+import { requestAlert } from "@/lib/notify";
 import { supabase } from "@/lib/supabase/client";
 import { MoneyPicture } from "./money-picture";
 import { type ActionResult, type Actor, errorMessage, labelClass, noteClass, primaryButtonClass } from "./shared";
@@ -50,6 +51,7 @@ export function CashCountScreen({ kind, actor, onSaved }: CashCountScreenProps) 
     },
     onSuccess: (result) => {
       if (result.ok) {
+        void requestAlert({ type: kind === "opening" ? "day_opened" : "day_closed" });
         onSaved(`${kind === "opening" ? "Day opened" : "Day closed"} · ${formatMoney(total)}`);
       } else {
         setConfirming(false);

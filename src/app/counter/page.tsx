@@ -6,10 +6,12 @@ import { useCallback, useEffect, useState } from "react";
 import { MilkIcon, NoteIcon, ShopIcon } from "@/components/brand-icons";
 import { CashCountScreen } from "@/components/counter/cash-count-screen";
 import { ExpenseScreen } from "@/components/counter/expense-screen";
+import { HiddenSignOut } from "@/components/counter/hidden-sign-out";
 import { PinPad } from "@/components/counter/pin-pad";
 import { type Employee, labelClass, noteClass } from "@/components/counter/shared";
 import { StockScreen } from "@/components/counter/stock-screen";
 import { RoleGate } from "@/components/role-gate";
+import { reportStaffEvent } from "@/lib/notify";
 import { supabase } from "@/lib/supabase/client";
 
 // The day is opened with a drawer count, and closed with one.
@@ -112,6 +114,7 @@ function Counter() {
         setPin(input.pin);
         return;
       }
+      if (result.error === "locked") reportStaffEvent({ type: "employee_locked", employeeId: input.employeeId });
       setPinError(pinMessage(result));
       setPadKey((key) => key + 1);
     },
@@ -177,7 +180,7 @@ function Counter() {
   return (
     <div className="flex min-h-dvh flex-1 flex-col bg-ink text-paper md:h-dvh">
       <header className="flex items-end justify-between gap-6 px-6 pt-6 pb-4 sm:px-8">
-        <span className="font-brand text-5xl leading-none uppercase">Matchai</span>
+        <HiddenSignOut />
         <span className="flex flex-col items-end gap-1 text-right">
           <span className="font-serif text-2xl leading-none italic">Sip green, feel seen.</span>
           <span className={`${noteClass} min-h-6 text-base text-paper/60`}>{today}</span>

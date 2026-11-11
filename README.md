@@ -24,6 +24,15 @@ Every database change is a migration file in `supabase/migrations/`. Never chang
 - New migration: `supabase migration new <name>`
 - Apply to the linked project: `supabase db push`
 
+## Notifications
+
+Owners turn notifications on per device, on the Alerts page. On iPhone and iPad the app
+must first be added to the home screen.
+
+- The server needs `SUPABASE_SECRET_KEY`, the two VAPID keys and `CRON_SECRET` (see `.env.example`).
+- `vercel.json` runs the weekly availability reminder on Saturday at 09:00 UTC.
+- Check the routes with `node --env-file=.env.local scripts/test-alerts.mjs` while the app runs.
+
 ## Photo credits
 
 The note and coin pictures on the drawer count screen are in `public/money/`.

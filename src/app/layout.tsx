@@ -1,5 +1,6 @@
-import type { Metadata } from "next";
-import { Anton, Barlow_Condensed, Cormorant_Garamond, Geist, Geist_Mono } from "next/font/google";
+import type { Metadata, Viewport } from "next";
+import { Anton, Barlow_Condensed, Caveat, Cormorant_Garamond, Geist, Geist_Mono } from "next/font/google";
+import { ServiceWorker } from "@/components/service-worker";
 import { Providers } from "./providers";
 import "./globals.css";
 
@@ -32,20 +33,37 @@ const cormorant = Cormorant_Garamond({
   subsets: ["latin"],
 });
 
+// Handwriting, for the few words that should feel written by hand.
+const caveat = Caveat({
+  variable: "--font-caveat",
+  weight: "700",
+  subsets: ["latin"],
+});
+
 export const metadata: Metadata = {
   title: "Matchai Team",
   description: "Internal team app for Matchai.",
   robots: { index: false, follow: false },
+  icons: { icon: "/icons/icon-192.png", apple: "/icons/apple-touch-icon.png" },
+  appleWebApp: { capable: true, title: "Matchai", statusBarStyle: "black-translucent" },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#11110f",
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${anton.variable} ${barlowCondensed.variable} ${cormorant.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${anton.variable} ${barlowCondensed.variable} ${cormorant.variable} ${caveat.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         <Providers>{children}</Providers>
+        <ServiceWorker />
       </body>
     </html>
   );

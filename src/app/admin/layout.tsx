@@ -1,55 +1,83 @@
 "use client";
 
+import { Bell, LogOut } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { AppLock } from "@/components/admin/app-lock";
 import { RoleGate } from "@/components/role-gate";
+import { ADMIN_GROUPS, ALERTS_HREF, isOnPage } from "@/lib/admin-nav";
 import { useSession } from "@/lib/session";
-
-const NAV = [
-  { href: "/admin/cash", label: "Cash" },
-  { href: "/admin/expenses", label: "Expenses" },
-  { href: "/admin/stock", label: "Stock" },
-  { href: "/admin/schedule", label: "Schedule" },
-  { href: "/admin/employees", label: "Employees" },
-] as const;
 
 function AdminShell({ children }: { children: React.ReactNode }) {
   const { data: session } = useSession();
   const pathname = usePathname();
 
+  const onAlerts = isOnPage(pathname, ALERTS_HREF);
+
+  // RoleGate has already checked that an owner is signed in.
+  if (!session) return null;
+
   return (
+    <AppLock userId={session.userId}>
     <div className="flex min-h-dvh flex-1 flex-col bg-paper text-ink">
-      <header className="flex flex-wrap items-center justify-between gap-x-8 gap-y-3 bg-ink px-5 py-4 text-paper sm:px-8">
-        <div className="flex items-center gap-8">
-          <span className="font-brand text-4xl leading-none uppercase">Matchai</span>
-          <nav className="flex flex-wrap gap-x-6 gap-y-1">
-            {NAV.map((item) => {
-              const isCurrent = pathname.startsWith(item.href);
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  aria-current={isCurrent ? "page" : undefined}
-                  className={
-                    "border-b-2 pb-1 font-label text-xl font-semibold tracking-[0.06em] uppercase " +
-                    (isCurrent ? "border-sage text-sage" : "border-transparent text-paper/70 hover:text-paper")
-                  }
-                >
-                  {item.label}
-                </Link>
-              );
-            })}
-          </nav>
-        </div>
-        <div className="flex items-center gap-5 font-label text-lg font-medium tracking-[0.1em] uppercase">
-          <span className="text-paper/60">{session?.name}</span>
-          <Link href="/logout" className="underline-offset-8 hover:underline">
-            Sign out
+      {/* One bar: logo left, every page centered, alerts and sign out right. */}
+      <header className="grid grid-cols-2 items-center gap-x-4 gap-y-3 bg-ink px-5 py-4 text-paper sm:px-8 lg:grid-cols-[1fr_auto_1fr]">
+        <span className="font-brand text-3xl leading-none uppercase sm:text-4xl">Matchai</span>
+
+        <nav
+          aria-label="Pages"
+          className="order-last col-span-2 flex flex-wrap items-center justify-center gap-x-7 gap-y-2 sm:gap-x-10 lg:order-none lg:col-span-1"
+        >
+          {ADMIN_GROUPS.map((group) => (
+            <div key={group[0].href} className="flex items-center gap-7 sm:gap-10">
+              {group.map((page) => {
+                const isCurrent = isOnPage(pathname, page.href);
+                return (
+                  <Link
+                    key={page.href}
+                    href={page.href}
+                    aria-current={isCurrent ? "page" : undefined}
+                    className={
+                      "border-b-2 pb-1 font-label text-xl font-semibold tracking-[0.06em] uppercase " +
+                      (isCurrent ? "border-sage text-sage" : "border-transparent text-paper/70 hover:text-paper")
+                    }
+                  >
+                    {page.label}
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
+        </nav>
+
+        <div className="flex items-center justify-end gap-2 sm:gap-4">
+          <span className="hidden font-label text-lg font-medium tracking-[0.1em] whitespace-nowrap text-paper/60 uppercase xl:inline">
+            {session?.name}
+          </span>
+          <Link
+            href={ALERTS_HREF}
+            aria-label="Alerts"
+            aria-current={onAlerts ? "page" : undefined}
+            className={
+              "flex size-10 items-center justify-center rounded-full " +
+              (onAlerts ? "text-sage" : "text-paper/70 hover:text-paper")
+            }
+          >
+            <Bell className="size-5" fill={onAlerts ? "currentColor" : "none"} aria-hidden="true" />
+          </Link>
+          <Link
+            href="/logout"
+            aria-label="Sign out"
+            className="flex size-10 items-center justify-center rounded-full text-paper/70 hover:text-paper"
+          >
+            <LogOut className="size-5" aria-hidden="true" />
           </Link>
         </div>
       </header>
+
       <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 px-5 py-8 sm:px-8">{children}</main>
     </div>
+    </AppLock>
   );
 }
 
