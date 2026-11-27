@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+import { ChangePassword } from "@/components/admin/change-password";
 import { Button } from "@/components/ui/button";
 import { lockSupported, savedLock, turnLockOff, turnLockOn } from "@/lib/app-lock";
 import { requestAlert } from "@/lib/notify";
@@ -258,6 +259,8 @@ export default function AlertsPage() {
           </Button>
         )}
       </div>
+
+      <ChangePassword />
     </div>
   );
 }
