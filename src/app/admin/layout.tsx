@@ -19,9 +19,9 @@ function AdminShell({ children }: { children: React.ReactNode }) {
 
   return (
     <AppLock userId={session.userId}>
-    <div className="flex min-h-dvh flex-1 flex-col bg-paper text-ink">
+    <div data-paper-page className="flex min-h-dvh flex-1 flex-col bg-paper text-ink">
       {/* One bar, also on a phone: logo left, every page centered, alerts and sign out right. */}
-      <header className="grid grid-cols-[auto_1fr_auto] items-center gap-x-3 bg-ink px-4 py-3 text-paper sm:gap-x-4 sm:px-8 sm:py-4 lg:grid-cols-[1fr_auto_1fr]">
+      <header className="grid grid-cols-[auto_1fr_auto] items-center gap-x-3 bg-ink px-4 pt-[calc(env(safe-area-inset-top)+0.75rem)] pb-3 text-paper sm:gap-x-4 sm:px-8 sm:pt-[calc(env(safe-area-inset-top)+1rem)] sm:pb-4 lg:grid-cols-[1fr_auto_1fr]">
         <span className="font-brand text-2xl leading-none uppercase sm:text-4xl">Matchai</span>
 
         <nav
@@ -75,7 +75,7 @@ function AdminShell({ children }: { children: React.ReactNode }) {
         </div>
       </header>
 
-      <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 px-5 py-8 sm:px-8">{children}</main>
+      <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 px-5 pt-8 pb-[calc(env(safe-area-inset-bottom)+2rem)] sm:px-8">{children}</main>
     </div>
     </AppLock>
   );

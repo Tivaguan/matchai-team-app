@@ -7,7 +7,7 @@ import { homeFor, type Role, useSession } from "@/lib/session";
 /** Shown while we find out who is logged in. */
 export function Splash() {
   return (
-    <div className="flex min-h-dvh flex-1 items-center justify-center bg-ink text-paper">
+    <div className="safe-screen flex min-h-dvh flex-1 items-center justify-center bg-ink text-paper">
       <span className="font-brand text-6xl leading-none uppercase">Matchai</span>
     </div>
   );

@@ -136,10 +136,25 @@
   * {
     @apply border-border outline-ring/50;
   }
+  /* The app runs full screen on phones (behind the clock and the home bar).
+     Whatever shows past the page edges is ink, except on the paper owner pages. */
+  html {
+    background: var(--ink);
+  }
+  html:has([data-paper-page]) {
+    background: var(--paper);
+  }
   body {
-    @apply bg-background text-foreground;
+    @apply text-foreground;
   }
   html {
     @apply font-sans;
   }
+}
+/* Keeps a full-screen page clear of the notch, the clock and the home bar. */
+@utility safe-screen {
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-left: env(safe-area-inset-left, 0px);
 }

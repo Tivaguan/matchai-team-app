@@ -38,7 +38,7 @@ export function AppLock({ userId, children }: { userId: string; children: React.
   if (state === "open") return children;
 
   return (
-    <div className="flex min-h-dvh flex-1 flex-col items-center justify-center gap-8 bg-ink px-6 text-paper">
+    <div className="safe-screen flex min-h-dvh flex-1 flex-col items-center justify-center gap-8 bg-ink px-6 text-paper">
       <span className="font-brand text-6xl leading-none uppercase">Matchai</span>
       {state === "locked" && (
         <div className="flex w-full max-w-xs flex-col items-center gap-4">

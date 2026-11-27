@@ -61,7 +61,8 @@ export default function LoginPage() {
   if (isPending || session) return <Splash />;
 
   return (
-    <main className="flex min-h-dvh flex-1 flex-col items-center justify-center gap-8 bg-ink p-6 text-paper">
+    <main className="safe-screen flex min-h-dvh flex-1 flex-col items-center justify-center gap-8 bg-ink text-paper">
+      <div className="flex w-full flex-col items-center gap-8 p-6">
       <div className="flex flex-col items-center gap-2">
         <span className="font-brand text-7xl leading-none uppercase">Matchai</span>
         <span className="font-serif text-2xl leading-none italic">Sip green, feel seen.</span>
@@ -110,6 +111,7 @@ export default function LoginPage() {
           {busy ? "Signing in" : "Sign in"}
         </button>
       </form>
+      </div>
     </main>
   );
 }

@@ -178,7 +178,7 @@ function Counter() {
   const actor = employee && pin ? { employee, pin } : null;
 
   return (
-    <div className="flex min-h-dvh flex-1 flex-col bg-ink text-paper md:h-dvh">
+    <div className="safe-screen flex min-h-dvh flex-1 flex-col bg-ink text-paper md:h-dvh">
       <header className="flex items-end justify-between gap-6 px-6 pt-6 pb-4 sm:px-8">
         <HiddenSignOut />
         <span className="flex flex-col items-end gap-1 text-right">
